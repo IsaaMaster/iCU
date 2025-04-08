@@ -10,13 +10,15 @@
 #include <fcntl.h>
 #include <sys/select.h>
 #include <time.h>
+#include <curl/curl.h>
+
 
 #define PORT 28900
 #define BUFFER_SIZE 1024
 #define SCAN_INTERVAL 60  // seconds between scans
 
 // Your user ID
-const char* USER_ID = "your_userid_here";
+const char* USER_ID = "Linx";
 
 /**
  * Scans the local network for open TCP port 28900.
@@ -57,15 +59,32 @@ int probe_host(const char* ip_address) {
  */
 void handle_response(const char* ip, const char* response);
 
+void send_http_get_curl(const char* url) {
+    CURL* curl = curl_easy_init();
+    if (curl) {
+        curl_easy_setopt(curl, CURLOPT_URL, url);
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+        curl_easy_perform(curl);
+        curl_easy_cleanup(curl);
+    }
+}
+
+
 /**
- * Sends an uptime heartbeat to vmwardrobe once a minute.
+ * Sends an uptime heartbeat to vmwardrobe when called.
  */
-void send_uptime(int seconds_alive);
+void send_uptime(int seconds_alive) {
+    char url[BUFFER_SIZE];
+    snprintf(url, sizeof(url), "http://vmwardrobe.com/heartbeat?user=%s&uptime=%d", USER_ID, seconds_alive);
+    send_http_get_curl(url);
+    return; 
+};
+
 
 /**
  * Main client loop.
  */
-void run_client(){
+void run_client() {
     int seconds_alive = 0;
     while(1){
         scan_network();
@@ -73,7 +92,7 @@ void run_client(){
         seconds_alive += SCAN_INTERVAL;
         send_uptime(seconds_alive);
     }
-}
+};
 
 int main() {
     run_client();
