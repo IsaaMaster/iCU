@@ -10,6 +10,8 @@
 #include <fcntl.h>
 #include <sys/select.h>
 #include <time.h>
+#include <curl/curl.h>
+
 
 #define PORT 28900
 #define BUFFER_SIZE 1024
@@ -21,8 +23,8 @@ const char* USER_ID = "Linx";
 /**
  * Scans the local network for open TCP port 28900.
  */
-void scan_network(){
-    const char* base_ip_address = "10.124.";
+void scan_network() {
+      const char* base_ip_address = "10.124.";
     char ip_address[INET_ADDRSTRLEN]; // Buffer to hold the IP address string
     char buffer[BUFFER_SIZE];
     
@@ -88,7 +90,6 @@ int probe_host(const char* ip_address) {
     
     return sockfd; 
 }
-
 
 /**
  * Parses the server's response and submits detection via HTTP GET.
