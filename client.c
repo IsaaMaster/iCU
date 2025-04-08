@@ -84,14 +84,10 @@ void scan_network() {
         if (sockfd >= 0) {
             printf("Found server at IP: %s\n", ip_address);
             handle_response(sockfd);
-            } else {
-                printf("No response received from server at IP: %s\n", ip_address);
-            }
-            
-            close(sockfd);
-        }  else {
-            printf("No server at IP: %s\n", ip_address);
+        } else {
+            printf("No response received from server at IP: %s\n", ip_address);
         }
+        close(sockfd);
     }
 }
 
