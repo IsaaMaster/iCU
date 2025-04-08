@@ -29,7 +29,14 @@ void get_ap_name(char* ap_buffer, size_t len);
 /**
  * Checks if server is allowed to respond (every 15 min).
  */
-int should_respond();
+int should_respond(){
+    time_t now = time(NULL);
+    if (difftime(now, last_response_time) >= RESPONSE_COOLDOWN) {
+        last_response_time = now;
+        return 1;
+    }
+    return 0;
+}
 
 /**
  * Responds to a valid client request with userID and AP.
