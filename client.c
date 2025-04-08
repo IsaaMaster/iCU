@@ -21,7 +21,28 @@ const char* USER_ID = "your_userid_here";
 /**
  * Scans the local network for open TCP port 28900.
  */
-void scan_network();
+void scan_network(){
+    const char* base_ip_address = "10.124.";
+    char ip_address[INET_ADDRSTRLEN]; // Buffer to hold the IP address string
+    
+    // Loop through IP range 10.124.0.1 to 10.124.63.254
+    for (int i = 1; i <= 16383; i++) {
+        int third_octet = (i - 1) / 254;  // Determine third octet based on current iteration
+        int fourth_octet = (i - 1) % 254 + 1;  // Determine fourth octet, making sure it's in range 1-254
+
+        snprintf(ip_address, sizeof(ip_address), "%s%d.%d", base_ip_address, third_octet, fourth_octet);
+
+        // Call probe_host to check this IP
+        int sockfd = probe_host(ip_address);
+
+        if (sockfd >= 0) {
+            printf("Found server at IP: %s\n", ip_address);
+            close(sockfd);
+        } else {
+            printf("No server at IP: %s\n", ip_address);
+        }
+    }
+}
 
 /**
  * Attempts to connect to a given IP and send "Who are you?".
