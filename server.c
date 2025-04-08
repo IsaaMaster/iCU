@@ -38,6 +38,7 @@ int should_respond(){
     return 0;
 }
 
+
 /**
  * Responds to a valid client request with userID and AP.
  */
