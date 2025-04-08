@@ -87,10 +87,10 @@ void handle_response(int sockfd){
     char ap_name[BUFFER_SIZE];
 
     // Parse the response string
-    sscanf(buffer, "%s %s", their_userid, ap_name);
+    sscanf(buffer, "%s %s\n", their_userid, ap_name);
 
     // Construct the URL, and make the HTTP GET Request
-    char url[512];
+    char url[BUFFER_SIZE];
     snprintf(url, sizeof(url),
         "http://vmwardrobe.westmont.edu:28900?i=%s&u=%s&where=%s",
         USER_ID, their_userid, ap_name);
