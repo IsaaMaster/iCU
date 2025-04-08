@@ -65,7 +65,15 @@ void send_uptime(int seconds_alive);
 /**
  * Main client loop.
  */
-void run_client();
+void run_client(){
+    int seconds_alive = 0;
+    while(1){
+        scan_network();
+        sleep(SCAN_INTERVAL);
+        seconds_alive += SCAN_INTERVAL;
+        send_uptime(seconds_alive);
+    }
+}
 
 int main() {
     run_client();
