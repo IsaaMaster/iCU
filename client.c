@@ -56,8 +56,45 @@ int probe_host(const char* ip_address) {
  * Parses the server's response and submits detection via HTTP GET.
  */
 void handle_response(int sockfd, const char* ip, const char* response);
+    char buffer[BUFFER_SIZE];
+    memset(buffer, 0, BUFFER_SIZE);
+
+    int bytes_received = recv(sockfd, buffer, BUFFER_SIZE - 1, 0);
+    if (bytes_received <= 0) {
+        perror("Error receiving data");
+        close(sockfd);
+        return;
+    }
+
+    buffer[bytes_received] = '\0';
+
     char server_userid[BUFFER_SIZE];
     char ap_name[BUFFER_SIZE];
+
+    if (sscanf(buffer, "%s %s", server_userid, ap_name) != 2) {
+        fprintf(stderr, "Invalid response format: %s\n", buffer);
+        close(sockfd);
+        return;
+    }
+
+    int report_sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (report_sock < 0) {
+        perror("Socket creation failed for reporting");
+        close(sockfd);
+        return;
+    }
+
+    struct sockaddr_in server_addr;
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(28900);
+    server_addr.sin_addr.s_addr = inet_addr("vmwardrobe.westmont.edu");
+
+    if (connect(report_sock, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
+        perror("Connection to vmwardrobe failed");
+        close(sockfd);
+        close(report_sock);
+        return;
+    }
 
 
 
