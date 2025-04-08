@@ -54,10 +54,22 @@ int probe_host(const char* ip_address) {
     return sockfd;
 }
 
+
+void send_http_get_curl(const char* url) {
+    CURL* curl = curl_easy_init();
+    if (curl) {
+        curl_easy_setopt(curl, CURLOPT_URL, url);
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+        curl_easy_perform(curl);
+        curl_easy_cleanup(curl);
+    }
+}
+
+
 /**
  * Parses the server's response and submits detection via HTTP GET.
  */
-void handle_response(int sockfd);
+void handle_response(int sockfd){
     // setup string to receive response to "Who are you?
     char buffer[BUFFER_SIZE];
 
@@ -83,16 +95,6 @@ void handle_response(int sockfd);
         "http://vmwardrobe.westmont.edu:28900?i=%s&u=%s&where=%s",
         USER_ID, their_userid, ap_name);
     send_http_get_curl(url);
-
-
-void send_http_get_curl(const char* url) {
-    CURL* curl = curl_easy_init();
-    if (curl) {
-        curl_easy_setopt(curl, CURLOPT_URL, url);
-        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-        curl_easy_perform(curl);
-        curl_easy_cleanup(curl);
-    }
 }
 
 /**
