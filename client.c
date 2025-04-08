@@ -18,7 +18,7 @@
 #define SCAN_INTERVAL 60  // seconds between scans
 
 // Your user ID
-const char* USER_ID = "Linx";
+const char* USER_ID = "Lynx";
 
 /**
  * Scans the local network for open TCP port 28900.
@@ -50,14 +50,10 @@ int probe_host(const char* ip_address) {
     memset(&server_addr, 0, sizeof(server_addr));
 
     send(sockfd, "Who are you?", strlen("Who are you?"), 0);
-    
-    return sockfd; 
+
+    return sockfd;
 }
 
-/**
- * Parses the server's response and submits detection via HTTP GET.
- */
-void handle_response(const char* ip, const char* response);
 
 void send_http_get_curl(const char* url) {
     CURL* curl = curl_easy_init();
@@ -71,21 +67,51 @@ void send_http_get_curl(const char* url) {
 
 
 /**
+ * Parses the server's response and submits detection via HTTP GET.
+ */
+void handle_response(int sockfd){
+    // setup string to receive response to "Who are you?
+    char buffer[BUFFER_SIZE];
+
+    // receive the response and store it in buffer
+    int bytes_received = recv(sockfd, buffer, BUFFER_SIZE, 0);
+    if (bytes_received <= 0) {
+        perror("Error receiving data");
+        close(sockfd);
+        return;
+    }
+    buffer[bytes_received] = '\0';
+
+    // split the string into userid and access point
+    char their_userid[BUFFER_SIZE];
+    char ap_name[BUFFER_SIZE];
+
+    // Parse the response string
+    sscanf(buffer, "%s %s\n", their_userid, ap_name);
+
+    // Construct the URL, and make the HTTP GET Request
+    char url[BUFFER_SIZE];
+    snprintf(url, sizeof(url),
+        "http://vmwardrobe.westmont.edu:28900?i=%s&u=%s&where=%s",
+        USER_ID, their_userid, ap_name);
+    send_http_get_curl(url);
+}
+
+/**
  * Sends an uptime heartbeat to vmwardrobe when called.
  */
 void send_uptime(int seconds_alive) {
     char url[BUFFER_SIZE];
     snprintf(url, sizeof(url), "http://vmwardrobe.com/heartbeat?user=%s&uptime=%d", USER_ID, seconds_alive);
     send_http_get_curl(url);
-    return; 
+    return;
 };
-
 
 /**
  * Main client loop.
  */
 void run_client() {
-    return; 
+    return;
 };
 
 int main() {
