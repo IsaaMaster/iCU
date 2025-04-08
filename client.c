@@ -24,6 +24,7 @@ const char* USER_ID = "your_userid_here";
 void scan_network(){
     const char* base_ip_address = "10.124.";
     char ip_address[INET_ADDRSTRLEN]; // Buffer to hold the IP address string
+    char buffer[BUFFER_SIZE];
     
     // Loop through IP range 10.124.0.1 to 10.124.63.254
     for (int i = 1; i <= 16383; i++) {
@@ -37,8 +38,23 @@ void scan_network(){
 
         if (sockfd >= 0) {
             printf("Found server at IP: %s\n", ip_address);
+            
+            // clear the buffer before use
+            memset(buffer, 0, sizeof(buffer))
+
+            // attempt to receive data from server
+            int bytes_received = recv(sockfd, buffer, BUFFER_SIZE - 1, 0);
+        
+            // if data is received successfully, handle the response
+            if (bytes_received > 0) {
+                buffer[bytes_received] = '\0'; // Null-terminate the response
+                handle_response(ip_address, buffer);
+            } else {
+                printf("No response received from server at IP: %s\n", ip_address);
+            }
+            
             close(sockfd);
-        } else {
+        }  else {
             printf("No server at IP: %s\n", ip_address);
         }
     }
