@@ -57,7 +57,7 @@ int probe_host(const char* ip_address) {
 /**
  * Parses the server's response and submits detection via HTTP GET.
  */
-void handle_response(int sockfd, const char* ip, const char* response);
+void handle_response(int sockfd);
     // setup string to receive response to "Who are you?
     char buffer[BUFFER_SIZE];
 
