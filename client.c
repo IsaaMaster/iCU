@@ -26,7 +26,31 @@ void scan_network();
 /**
  * Attempts to connect to a given IP and send "Who are you?".
  */
-int probe_host(const char* ip_address);
+int probe_host(const char* ip_address) {
+    char send_buffer[BUFFER_SIZE];
+    int sockfd;
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
+    if (sockfd < 0) {
+        perror("Socket creation failed");
+        return -1;
+    }
+
+    struct sockaddr_in server_addr;
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(PORT);
+    server_addr.sin_addr.s_addr = inet_addr(ip_address);
+
+    if (connect(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
+        perror("Connection creation failed");
+        return -1;
+    }
+    memset(&server_addr, 0, sizeof(server_addr));
+
+    send(sockfd, "Who are you?", strlen("Who are you?"), 0);
+
+    return sockfd;
+}
 
 /**
  * Parses the server's response and submits detection via HTTP GET.
