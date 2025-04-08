@@ -31,7 +31,11 @@ int probe_host(const char* ip_address);
 /**
  * Parses the server's response and submits detection via HTTP GET.
  */
-void handle_response(const char* ip, const char* response);
+void handle_response(int sockfd, const char* ip, const char* response);
+    char server_userid[BUFFER_SIZE];
+    char ap_name[BUFFER_SIZE];
+
+
 
 /**
  * Sends an uptime heartbeat to vmwardrobe once a minute.
