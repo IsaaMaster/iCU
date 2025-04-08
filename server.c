@@ -38,26 +38,79 @@ int should_respond(){
     return 0;
 }
 
-
 /**
  * Responds to a valid client request with userID and AP.
  */
 void respond_to_client(int client_socket);
 
 /**
- * Handles a single client connection.
+ * Handles a single client connection. Will call respond_to_client if there is a valid request. 
  */
-void handle_connection(int client_socket);
+void handle_connection(int client_socket) {
+    return; 
+}
 
 /**
  * Sets up the TCP server socket.
  */
-int setup_server_socket();
+int setup_server_socket() {
+    int sockfd;
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
+    if (sockfd < 0) {
+        printf("Socket creation failed");
+        return -1;
+    }
+
+    struct sockaddr_in server_addr;
+
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = INADDR_ANY;
+    server_addr.sin_port = htons(PORT);
+
+    if (bind(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
+        printf("Bind failed");
+        close(sockfd);
+        return -1;
+    }
+
+    if (listen(sockfd, 3) < 0) {
+        perror("listen");
+        close(sockfd);
+        return -1; 
+    }
+
+    printf("Server listening on port %d\n", PORT);
+
+    return sockfd;
+    
+}
 
 /**
  * Main server loop using select().
  */
-void run_server();
+void run_server() {
+    int new_socket;
+    struct sockaddr_in client_addr;
+    socklen_t addr_len = sizeof(client_addr);
+    int server_socket = setup_server_socket();
+    if (server_socket < 0) return;   
+
+    while(1) {
+        new_socket = accept(server_socket, (struct sockaddr*)&client_addr, &addr_len);
+        if (new_socket < 0) {
+            perror("accept");
+            continue;
+        }
+
+        if (should_respond()) {
+            handle_connection(new_socket);
+        } else {
+            printf("Response cooldown active. Ignoring request.\n");
+            close(new_socket);
+        }
+    }
+}
 
 int main() {
     run_server();
