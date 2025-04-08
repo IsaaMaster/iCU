@@ -18,7 +18,7 @@
 #define SCAN_INTERVAL 60  // seconds between scans
 
 // Your user ID
-const char* USER_ID = "Linx";
+const char* USER_ID = "Lynx";
 
 /**
  * Scans the local network for open TCP port 28900.
