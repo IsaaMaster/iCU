@@ -10,21 +10,16 @@
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <sys/select.h>
+#include "utils.h"
+
 
 #define PORT 28900
 #define RESPONSE_COOLDOWN 900 // 15 minutes in seconds
 #define BUFFER_SIZE 1024
 
-// Your user ID
-const char* USER_ID = "isong";
-
 // Last time a response was sent
 time_t last_response_time;
 
-/**
- * Retrieves the access point name or BSSID.
- */
-void get_ap_name(char* ap_buffer, size_t len);
 
 /**
  * Checks if server is allowed to respond (every 15 min).
@@ -147,6 +142,7 @@ void run_server() {
 }
 
 int main() {
+    get_ap_name("AP_NAME", BUFFER_SIZE);
     run_server();
     return 0;
 }
