@@ -16,7 +16,7 @@
 #define BUFFER_SIZE 1024
 
 // Your user ID
-const char* USER_ID = "your_userid_here";
+const char* USER_ID = "isong";
 
 // Last time a response was sent
 time_t last_response_time;
@@ -41,12 +41,12 @@ int should_respond(){
 /**
  * Responds to a valid client request with userID and AP.
  */
-void respond_to_client(int client_socket, const char* access_point_name) {
+void respond_to_client(int client_socket) {
     // variable to hold server response
     char response[BUFFER_SIZE];
 
     // format the message correctly
-    snprintf(response, BUFFER_SIZE, "%s %s\n", USER_ID, access_point_name);
+    snprintf(response, BUFFER_SIZE, "%s %s\n", USER_ID, "AP_NAME");
 
     // Send the response
     ssize_t bytes_sent = send(client_socket, response, strlen(response), 0);
@@ -57,11 +57,30 @@ void respond_to_client(int client_socket, const char* access_point_name) {
     }
 }
 
+
 /**
  * Handles a single client connection. Will call respond_to_client if there is a valid request. 
  */
 void handle_connection(int client_socket) {
-    return; 
+    printf("Connection established with client\n");
+    char buffer[BUFFER_SIZE];
+    int bytes_received = recv(client_socket, buffer, BUFFER_SIZE, 0);
+    if (bytes_received <= 0) {
+        perror("Error receiving data");
+        close(client_socket);
+        return;
+    }
+    buffer[bytes_received] = '\0';
+
+    printf("Received request: %s\n", buffer);
+    if (strncmp(buffer, "Who are you?", 12) == 0) {
+        printf("Received request: %s\n", buffer);
+        respond_to_client(client_socket);
+    } else {
+        printf("Invalid request: %s\n", buffer);
+    }
+    
+    close(client_socket);
 }
 
 /**
@@ -118,6 +137,7 @@ void run_server() {
         }
 
         if (should_respond()) {
+            printf("connection made!\n");
             handle_connection(new_socket);
         } else {
             printf("Response cooldown active. Ignoring request.\n");
