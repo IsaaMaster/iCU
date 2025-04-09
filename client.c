@@ -137,10 +137,12 @@ void send_uptime(int seconds_alive) {
  */
 void run_client() {
     int seconds_alive = 0;
+    time_t last_time = time(NULL);
     while(1){
         scan_network();
         sleep(SCAN_INTERVAL);
-        seconds_alive += SCAN_INTERVAL;
+        seconds_alive += last_time - time(NULL);
+        last_time = time(NULL);
         send_uptime(seconds_alive);
     }
 };
