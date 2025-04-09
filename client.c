@@ -42,7 +42,7 @@ void handle_response(int sockfd){
     // receive the response and store it in buffer
     int bytes_received = recv(sockfd, buffer, BUFFER_SIZE, 0);
     if (bytes_received <= 0) {
-        perror("Error receiving data");
+        printf("Client - Error receiving data\n");
         close(sockfd);
         return;
     }
@@ -54,7 +54,7 @@ void handle_response(int sockfd){
 
     // Parse the response string
     sscanf(buffer, "%s %s\n", their_userid, ap_name);
-    printf("Received response: %s %s\n", their_userid, ap_name);
+    printf("Client - Received response: %s %s\n", their_userid, ap_name);
     // Construct the URL, and make the HTTP GET Request
     char url[BUFFER_SIZE];
     snprintf(url, sizeof(url),
@@ -67,13 +67,13 @@ void handle_response(int sockfd){
  * Attempts to connect to a given IP and send "Who are you?".
  */
 int probe_host(const char* ip_address) {
-    printf("Probing IP: %s\n", ip_address);
+    printf("Client - Probing IP: %s\n", ip_address);
     char send_buffer[BUFFER_SIZE];
     int sockfd;
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
     if (sockfd < 0) {
-        printf("Socket creation failed");
+        printf("Client - Socket creation failed\n");
         return -1;
     }
 
@@ -83,14 +83,14 @@ int probe_host(const char* ip_address) {
     server_addr.sin_addr.s_addr = inet_addr(ip_address);
 
     if (connect(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
-        printf("Connection creation failed");
+        printf("Client - Connection creation failed\n");
         return -1;
     }
     memset(&server_addr, 0, sizeof(server_addr));
 
-    printf("Connected to server at IP: %s\n", ip_address);
+    printf("Client - Connected to server at IP: %s\n", ip_address);
     send(sockfd, "Who are you?", strlen("Who are you?"), 0);
-    printf("Sent request to server\n");
+    printf("Client - Sent request to server\n");
 
     return sockfd; 
 }
@@ -115,10 +115,10 @@ void scan_network() {
         int sockfd = probe_host(ip_address);
 
         if (sockfd >= 0) {
-            printf("Found server at IP: %s\n", ip_address);
+            printf("Client - Found server at IP: %s\n", ip_address);
             handle_response(sockfd);
         } else {
-            printf("No response received from server at IP: %s\n", ip_address);
+            printf("Client - No response received from server at IP: %s\n", ip_address);
         }
         close(sockfd);
     }
