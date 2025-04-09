@@ -41,12 +41,12 @@ int should_respond(){
 /**
  * Responds to a valid client request with userID and AP.
  */
-void respond_to_client(int client_socket, const char* access_point_name) {
+void respond_to_client(int client_socket) {
     // variable to hold server response
     char response[BUFFER_SIZE];
 
     // format the message correctly
-    snprintf(response, BUFFER_SIZE, "%s %s\n", USER_ID, access_point_name);
+    snprintf(response, BUFFER_SIZE, "%s %s\n", USER_ID, "AP_NAME");
 
     // Send the response
     ssize_t bytes_sent = send(client_socket, response, strlen(response), 0);

@@ -54,7 +54,7 @@ void handle_response(int sockfd){
 
     // Parse the response string
     sscanf(buffer, "%s %s\n", their_userid, ap_name);
-
+    printf("Received response: %s %s\n", their_userid, ap_name);
     // Construct the URL, and make the HTTP GET Request
     char url[BUFFER_SIZE];
     snprintf(url, sizeof(url),
