@@ -41,13 +41,33 @@ int should_respond(){
 /**
  * Responds to a valid client request with userID and AP.
  */
-void respond_to_client(int client_socket);
+void respond_to_client(int client_socket) {
+    
+};
 
 /**
  * Handles a single client connection. Will call respond_to_client if there is a valid request. 
  */
 void handle_connection(int client_socket) {
-    return; 
+    printf("Connection established with client\n");
+    char buffer[BUFFER_SIZE];
+    int bytes_received = recv(client_socket, buffer, BUFFER_SIZE, 0);
+    if (bytes_received <= 0) {
+        perror("Error receiving data");
+        close(client_socket);
+        return;
+    }
+    buffer[bytes_received] = '\0';
+
+    printf("Received request: %s\n", buffer);
+    if (strncmp(buffer, "Who are you?", 12) == 0) {
+        printf("Received request: %s\n", buffer);
+        respond_to_client(client_socket);
+    } else {
+        printf("Invalid request: %s\n", buffer);
+    }
+    
+    close(client_socket);
 }
 
 /**
@@ -104,6 +124,7 @@ void run_server() {
         }
 
         if (should_respond()) {
+            printf("connection made!\n");
             handle_connection(new_socket);
         } else {
             printf("Response cooldown active. Ignoring request.\n");
