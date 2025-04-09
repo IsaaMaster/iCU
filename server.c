@@ -38,10 +38,15 @@ int should_respond(){
  */
 void respond_to_client(int client_socket) {
     // variable to hold server response
-    char response[BUFFER_SIZE];
+    char response[BUFFER_SIZE]; 
+    char ap_name[BUFFER_SIZE];
+    int len = BUFFER_SIZE;
+
+    // Get the access point name
+    get_ap_name(ap_name, len);
 
     // format the message correctly
-    snprintf(response, BUFFER_SIZE, "%s %s\n", USER_ID, "AP_NAME");
+    snprintf(response, BUFFER_SIZE, "%s %s\n", USER_ID, ap_name);
 
     // Send the response
     ssize_t bytes_sent = send(client_socket, response, strlen(response), 0);
@@ -142,7 +147,6 @@ void run_server() {
 }
 
 int main() {
-    get_ap_name("AP_NAME", BUFFER_SIZE);
     run_server();
     return 0;
 }
