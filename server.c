@@ -16,7 +16,7 @@
 #define BUFFER_SIZE 1024
 
 // Your user ID
-const char* USER_ID = "lynx";
+const char* USER_ID = "isong";
 
 // Last time a response was sent
 time_t last_response_time;

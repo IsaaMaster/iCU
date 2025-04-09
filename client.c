@@ -18,7 +18,7 @@
 #define SCAN_INTERVAL 60  // seconds between scans
 
 // Your user ID
-const char* USER_ID = "Lynx";
+const char* USER_ID = "isong";
 
 
 void send_http_get_curl(const char* url) {
