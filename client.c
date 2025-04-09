@@ -11,14 +11,12 @@
 #include <sys/select.h>
 #include <time.h>
 #include <curl/curl.h>
+#include "utils.h"
 
 
 #define PORT 28900
 #define BUFFER_SIZE 1024
 #define SCAN_INTERVAL 60  // seconds between scans
-
-// Your user ID
-const char* USER_ID = "isong";
 
 
 void send_http_get_curl(const char* url) {
