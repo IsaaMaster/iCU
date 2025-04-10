@@ -10,21 +10,16 @@
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <sys/select.h>
+#include "utils.h"
+
 
 #define PORT 28900
 #define RESPONSE_COOLDOWN 900 // 15 minutes in seconds
 #define BUFFER_SIZE 1024
 
-// Your user ID
-const char* USER_ID = "isong";
-
 // Last time a response was sent
 time_t last_response_time;
 
-/**
- * Retrieves the access point name or BSSID.
- */
-void get_ap_name(char* ap_buffer, size_t len);
 
 /**
  * Checks if server is allowed to respond (every 15 min).
@@ -43,10 +38,15 @@ int should_respond(){
  */
 void respond_to_client(int client_socket) {
     // variable to hold server response
-    char response[BUFFER_SIZE];
+    char response[BUFFER_SIZE]; 
+    char ap_name[BUFFER_SIZE];
+    int len = BUFFER_SIZE;
+
+    // Get the access point name
+    get_ap_name(ap_name, len);
 
     // format the message correctly
-    snprintf(response, BUFFER_SIZE, "%s %s\n", USER_ID, "AP_NAME");
+    snprintf(response, BUFFER_SIZE, "%s %s\n", USER_ID, ap_name);
 
     // Send the response
     ssize_t bytes_sent = send(client_socket, response, strlen(response), 0);
@@ -62,22 +62,21 @@ void respond_to_client(int client_socket) {
  * Handles a single client connection. Will call respond_to_client if there is a valid request. 
  */
 void handle_connection(int client_socket) {
-    printf("Connection established with client\n");
+    printf("Server - Connection established with client\n");
     char buffer[BUFFER_SIZE];
     int bytes_received = recv(client_socket, buffer, BUFFER_SIZE, 0);
     if (bytes_received <= 0) {
-        perror("Error receiving data");
+        printf("Server - Error receiving data\n");
         close(client_socket);
         return;
     }
     buffer[bytes_received] = '\0';
 
-    printf("Received request: %s\n", buffer);
     if (strncmp(buffer, "Who are you?", 12) == 0) {
-        printf("Received request: %s\n", buffer);
+        printf("Server - Received request: %s\n", buffer);
         respond_to_client(client_socket);
     } else {
-        printf("Invalid request: %s\n", buffer);
+        printf("Server - Invalid request: %s\n", buffer);
     }
     
     close(client_socket);
@@ -91,7 +90,7 @@ int setup_server_socket() {
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
     if (sockfd < 0) {
-        printf("Socket creation failed");
+        printf("Server - Socket creation failed\n");
         return -1;
     }
 
@@ -102,7 +101,7 @@ int setup_server_socket() {
     server_addr.sin_port = htons(PORT);
 
     if (bind(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
-        printf("Bind failed");
+        printf("Server - Bind failed\n");
         close(sockfd);
         return -1;
     }
@@ -113,7 +112,7 @@ int setup_server_socket() {
         return -1; 
     }
 
-    printf("Server listening on port %d\n", PORT);
+    printf("Server - Server listening on port %d\n", PORT);
 
     return sockfd;
     
@@ -137,10 +136,10 @@ void run_server() {
         }
 
         if (should_respond()) {
-            printf("connection made!\n");
+            printf("Server - Connection made!\n");
             handle_connection(new_socket);
         } else {
-            printf("Response cooldown active. Ignoring request.\n");
+            printf("Server - Response cooldown active. Ignoring request.\n");
             close(new_socket);
         }
     }
