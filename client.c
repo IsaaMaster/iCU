@@ -11,12 +11,16 @@
 #include <sys/select.h>
 #include <time.h>
 #include <curl/curl.h>
+#include <errno.h>
+#include <regex.h>
 #include "utils.h"
 
 
 #define PORT 28900
 #define BUFFER_SIZE 1024
 #define SCAN_INTERVAL 60  // seconds between scans
+#define TIMEOUT_SEC 5
+#define MAX_IPS 1024
 
 
 void send_http_get_curl(const char* url) {
@@ -61,9 +65,6 @@ void handle_response(int sockfd){
     send_http_get_curl(url);
 }
 
-/**
- * Attempts to connect to a given IP and send "Who are you?".
- */
 int probe_host(const char* ip_address) {
     printf("Client - Probing IP: %s\n", ip_address);
     char send_buffer[BUFFER_SIZE];
@@ -75,52 +76,118 @@ int probe_host(const char* ip_address) {
         return -1;
     }
 
+    // Set socket to non-blocking
+    fcntl(sockfd, F_SETFL, O_NONBLOCK);
+
     struct sockaddr_in server_addr;
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(PORT);
     server_addr.sin_addr.s_addr = inet_addr(ip_address);
 
-    if (connect(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
-        printf("Client - Connection creation failed\n");
-        return -1;
+    int connect_result = connect(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr));
+    if (connect_result < 0) {
+        if (errno != EINPROGRESS) {
+            printf("Client - Immediate connect failed\n");
+            close(sockfd);
+            return -1;
+        }
+
+        // Wait for the socket to be writable (indicating connection success/failure)
+        fd_set writefds;
+        FD_ZERO(&writefds);
+        FD_SET(sockfd, &writefds);
+        struct timeval timeout;
+        timeout.tv_sec = TIMEOUT_SEC;
+        timeout.tv_usec = 0;
+
+        int select_result = select(sockfd + 1, NULL, &writefds, NULL, &timeout);
+        if (select_result <= 0) {
+            printf("Client - Connection timeout or select error\n");
+            close(sockfd);
+            return -1;
+        }
+
+        // Check if the socket has any errors
+        int so_error;
+        socklen_t len = sizeof(so_error);
+        getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &so_error, &len);
+        if (so_error != 0) {
+            printf("Client - Connection failed with error: %d\n", so_error);
+            close(sockfd);
+            return -1;
+        }
     }
-    memset(&server_addr, 0, sizeof(server_addr));
+
+    // Restore socket to blocking mode (optional)
+    fcntl(sockfd, F_SETFL, fcntl(sockfd, F_GETFL, 0) & ~O_NONBLOCK);
 
     printf("Client - Connected to server at IP: %s\n", ip_address);
     send(sockfd, "Who are you?", strlen("Who are you?"), 0);
     printf("Client - Sent request to server\n");
 
-    return sockfd; 
+    return sockfd;
 }
+
 
 
 /**
  * Scans the local network for open TCP port 28900.
  */
 void scan_network() {
-    const char* base_ip_address = "10.124.";
-    char ip_address[INET_ADDRSTRLEN]; // Buffer to hold the IP address string
     char buffer[BUFFER_SIZE];
-    
-    // Loop through IP range 10.124.0.1 to 10.124.63.254
-    for (int i = 1; i <= 1; i++) { //change back to 16393
-        int third_octet = (i - 1) / 254;  // Determine third octet based on current iteration
-        int fourth_octet = (i - 1) % 254 + 1;  // Determine fourth octet, making sure it's in range 1-254
+    FILE *fp;
+    char path[1024];
+    char *ips[MAX_IPS];
+    int ip_count = 0;
 
-        // snprintf(ip_address, sizeof(ip_address), "%s%d.%d", base_ip_address, third_octet, fourth_octet);
-        strcpy(ip_address, "172.21.190.205");
-        // Call probe_host to check this IP
-        int sockfd = probe_host(ip_address);
+    // Use masscan command for faster scanning
+    const char *masscan_command = "timeout 7s masscan 10.124.0.0-10.124.10.255 -p28900 --open --rate=2000 --wait=1 --max-rate=2000";
 
+    printf("Client: Scanning network for open port 28900...\n");
+
+    // Open a pipe to run the Masscan command
+    fp = popen(masscan_command, "r");
+    if (fp == NULL) {
+        perror("Failed to run Masscan");
+        return;
+    }
+
+    // Use regex to match lines like "Discovered open port 28900/tcp on 10.124.137.142"
+    regex_t regex;
+    regcomp(&regex, "Discovered open port 28900/tcp on ([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+)", REG_EXTENDED);
+
+    while (fgets(path, sizeof(path), fp) != NULL) {
+        regmatch_t matches[2];
+        if (regexec(&regex, path, 2, matches, 0) == 0) {
+            int len = matches[1].rm_eo - matches[1].rm_so;
+            if (ip_count < MAX_IPS) {
+                ips[ip_count] = strndup(path + matches[1].rm_so, len);
+                ip_count++;
+            }
+        }
+    }
+
+    regfree(&regex);
+    pclose(fp);
+
+    // Now loop through the discovered IPs
+    printf("Client: Found %d host(s) with port 28900 open:\n", ip_count);
+    for (int i = 0; i < ip_count; i++) {
+        printf(" - %s\n", ips[i]);
+        int sockfd = probe_host(ips[i]);
         if (sockfd >= 0) {
-            printf("Client - Found server at IP: %s\n", ip_address);
+            printf("Client - Found server at IP: %s\n", ips[i]);
             handle_response(sockfd);
         } else {
-            printf("Client - No response received from server at IP: %s\n", ip_address);
+            printf("Client - No response received from server at IP: %s\n", ips[i]);
         }
         close(sockfd);
+        free(ips[i]); // Free the allocated memory
     }
+
+    return;
 }
+
 /**
  * Sends an uptime heartbeat to vmwardrobe when called.
  */
@@ -137,8 +204,10 @@ void run_client() {
     int seconds_alive = 0;
     time_t last_time = time(NULL);
     while(1){
-        scan_network();
-        sleep(SCAN_INTERVAL);
+        while (last_time - time(NULL) < 60) {
+            scan_network();
+        }
+        printf("Client - Sending Uptime..."); 
         seconds_alive += last_time - time(NULL);
         last_time = time(NULL);
         send_uptime(seconds_alive);
