@@ -165,7 +165,7 @@ void scan_network() {
 
 
     // Use masscan command for faster scanning
-    const char *masscan_command = "timeout 50s masscan 10.124.0.0/18,10.90.0.0/18,10.124.128.0/18,10.90.128.0/18 -p28900 --open --rate=2000 --wait=1";
+    const char *masscan_command = "timeout 30s masscan 10.124.0.0/18,10.90.0.0/18,10.124.128.0/18,10.90.128.0/18 -p28900 --open --rate=2500 --wait=30";
 
     printf("Client: Scanning network for open port 28900...\n");
 
@@ -246,7 +246,7 @@ void run_client() {
         while (time(NULL)-last_time < 60) {
             scan_network();
         }
-        printf("Client - Sending Uptime..........................");
+        printf("Client - Sending Uptime..........................\n");
 
         // Update uptime and send it
         seconds_alive += time(NULL)-last_time;
