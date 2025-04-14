@@ -19,16 +19,20 @@
 #define PORT 28900
 #define BUFFER_SIZE 1024
 #define SCAN_INTERVAL 60  // seconds between scans
-#define TIMEOUT_SEC 5
-#define MAX_IPS 1024
+#define TIMEOUT_SEC 5  // timeout for connecting to a server
+#define MAX_IPS 1024  // max number of IPs to handle per scan
 
-
+/**
+ * Sends a simple HTTP Get request to the provided URL using libcurl
+ *
+ * @param url The full URL to send the GET request to
+ */
 void send_http_get_curl(const char* url) {
     CURL* curl = curl_easy_init();
     if (curl) {
-        curl_easy_setopt(curl, CURLOPT_URL, url);
+        curl_easy_setopt(curl, CURLOPT_URL, url);  // Set the URL to send the GET request to
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-        curl_easy_perform(curl);
+        curl_easy_perform(curl);  // Send the request
         curl_easy_cleanup(curl);
     }
 }
@@ -36,6 +40,9 @@ void send_http_get_curl(const char* url) {
 
 /**
  * Parses the server's response and submits detection via HTTP GET.
+ * Expected response format: "<their_userid> <access_point>"
+ *
+ * @param sockfd The socket file descriptor connected to the server
  */
 void handle_response(int sockfd){
     // setup string to receive response to "Who are you?
@@ -48,7 +55,7 @@ void handle_response(int sockfd){
         close(sockfd);
         return;
     }
-    buffer[bytes_received] = '\0';
+    buffer[bytes_received] = '\0';  // Null-terminate the string
 
     // split the string into userid and access point
     char their_userid[BUFFER_SIZE];
@@ -56,7 +63,9 @@ void handle_response(int sockfd){
 
     // Parse the response string
     sscanf(buffer, "%s %s\n", their_userid, ap_name);
+
     printf("Client - Received response: %s %s\n", their_userid, ap_name);
+
     // Construct the URL, and make the HTTP GET Request
     char url[BUFFER_SIZE];
     snprintf(url, sizeof(url),
@@ -64,12 +73,19 @@ void handle_response(int sockfd){
         USER_ID, their_userid, ap_name);
     send_http_get_curl(url);
 }
-
+/**
+ * Attempts to connect to a given IP on prt 28900 and sends a probe
+ * If successful, returns the socket descriptor.
+ *
+ * @param ip_address The IP address to connect to (as a string)
+ * @return The socket file descriptor if successful, or -1 if the connection fails.
+ */
 int probe_host(const char* ip_address) {
     printf("Client - Probing IP: %s\n", ip_address);
+
     char send_buffer[BUFFER_SIZE];
     int sockfd;
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);  // Create TCP socket
 
     if (sockfd < 0) {
         printf("Client - Socket creation failed\n");
@@ -79,14 +95,17 @@ int probe_host(const char* ip_address) {
     // Set socket to non-blocking
     fcntl(sockfd, F_SETFL, O_NONBLOCK);
 
+    // Setup server address
     struct sockaddr_in server_addr;
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(PORT);
     server_addr.sin_addr.s_addr = inet_addr(ip_address);
 
+    // Attempt to connect
     int connect_result = connect(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr));
     if (connect_result < 0) {
         if (errno != EINPROGRESS) {
+            // Immediate failure
             printf("Client - Immediate connect failed\n");
             close(sockfd);
             return -1;
@@ -121,6 +140,7 @@ int probe_host(const char* ip_address) {
     // Restore socket to blocking mode (optional)
     fcntl(sockfd, F_SETFL, fcntl(sockfd, F_GETFL, 0) & ~O_NONBLOCK);
 
+    // Send initial probe message
     printf("Client - Connected to server at IP: %s\n", ip_address);
     send(sockfd, "Who are you?", strlen("Who are you?"), 0);
     printf("Client - Sent request to server\n");
@@ -132,6 +152,8 @@ int probe_host(const char* ip_address) {
 
 /**
  * Scans the local network for open TCP port 28900.
+ * Uses masscan to quickly scan and regex to extract IPs.
+ * For each responsive host, sends a probe and handles the server response.
  */
 void scan_network() {
     char buffer[BUFFER_SIZE];
@@ -175,16 +197,17 @@ void scan_network() {
     // Now loop through the discovered IPs
     printf("Client: Found %d host(s) with port 28900 open:\n", ip_count);
     for (int i = 0; i < ip_count; i++) {
+        // Avoid sending duplicate probe to the same IP
         if (strcmp(ips[i], last_ip) == 0) {
             printf("Client - Skipping IP %s (same as previous)\n", ips[i]);
             continue; // Skip this IP and continue to the next one
         }
 
         printf(" - %s\n", ips[i]);
-        int sockfd = probe_host(ips[i]);
+        int sockfd = probe_host(ips[i]);  // Try connecting
         if (sockfd >= 0) {
             printf("Client - Found server at IP: %s\n", ips[i]);
-            handle_response(sockfd);
+            handle_response(sockfd);  // Handle response if connected
         } else {
             printf("Client - No response received from server at IP: %s\n", ips[i]);
         }
@@ -199,24 +222,35 @@ void scan_network() {
 
 /**
  * Sends an uptime heartbeat to vmwardrobe when called.
+ *
+ * @param seconds_alive The number of seconds this client has been running.
  */
 void send_uptime(int seconds_alive) {
+    // Construct heartbeat URL
     char url[BUFFER_SIZE];
     snprintf(url, sizeof(url), "http://vmwardrobe.com/heartbeat?user=%s&uptime=%d", USER_ID, seconds_alive);
+
+    // Send GET request
     send_http_get_curl(url);
     return; 
 };
+
 /**
  * Main client loop.
+ * Repeatedly scans the network and sends an uptime heartbeat once per minute.
  */
 void run_client() {
     int seconds_alive = 0;
     time_t last_time = time(NULL);
+
     while(1){
+        // Scan continuously for 60 seconds
         while (last_time - time(NULL) < 60) {
             scan_network();
         }
-        printf("Client - Sending Uptime..."); 
+        printf("Client - Sending Uptime...");
+
+        // Update uptime and send it
         seconds_alive += last_time - time(NULL);
         last_time = time(NULL);
         send_uptime(seconds_alive);
