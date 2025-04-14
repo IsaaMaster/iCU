@@ -139,6 +139,8 @@ void scan_network() {
     char path[1024];
     char *ips[MAX_IPS];
     int ip_count = 0;
+    char last_ip[16] = ""; // To store the last probed IP
+
 
     // Use masscan command for faster scanning
     const char *masscan_command = "timeout 7s masscan 10.124.0.0-10.124.10.255 -p28900 --open --rate=2000 --wait=1 --max-rate=2000";
@@ -173,6 +175,11 @@ void scan_network() {
     // Now loop through the discovered IPs
     printf("Client: Found %d host(s) with port 28900 open:\n", ip_count);
     for (int i = 0; i < ip_count; i++) {
+        if (strcmp(ips[i], last_ip) == 0) {
+            printf("Client - Skipping IP %s (same as previous)\n", ips[i]);
+            continue; // Skip this IP and continue to the next one
+        }
+
         printf(" - %s\n", ips[i]);
         int sockfd = probe_host(ips[i]);
         if (sockfd >= 0) {
@@ -183,6 +190,8 @@ void scan_network() {
         }
         close(sockfd);
         free(ips[i]); // Free the allocated memory
+
+        strcpy(last_ip, ips[i]);
     }
 
     return;
