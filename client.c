@@ -228,7 +228,7 @@ void scan_network() {
 void send_uptime(int seconds_alive) {
     // Construct heartbeat URL
     char url[BUFFER_SIZE];
-    snprintf(url, sizeof(url), "http://vmwardrobe.com/heartbeat?user=%s&uptime=%d", USER_ID, seconds_alive);
+    snprintf(url, sizeof(url), "http://vmwardrobe.westmont.edu:28900?i=%s&uptime=%d", USER_ID, seconds_alive);
 
     // Send GET request
     send_http_get_curl(url);
